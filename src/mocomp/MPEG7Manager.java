@@ -11,6 +11,7 @@
 // Revised: Jun.13, 2001
 // Revised: Dec.13, 2008
 // Revised: Aug.21, 2009
+// Revised: Jul.05, 2016
 //
 // Sep.01, 2009
 // * クラス名を変更
@@ -19,206 +20,224 @@
 // Dec.13, 2008
 // * 舞踊符を独自ファイル（motion2.xml）で定義するのをやめ，mpeg-7を用いた記述に
 //   変更した．それに伴い，舞踊符をxmlサーバ(xindice)から読み込むように変更した．
+// Jul.05, 2016
+// * XMLデータベースとして使っていたApache Xindiceのプロジェクトが終了したので，
+//   BaseXを利用するように修正した．
 
 package mocomp;
 
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.net.PasswordAuthentication;
+import java.net.Authenticator;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.xml.transform.TransformerException;
-import org.w3c.dom.*;
-import org.apache.xpath.XPathAPI;
-import org.xmldb.api.base.*;
-import org.xmldb.api.modules.*;
-import org.xmldb.api.*;
 
 public class MPEG7Manager {
-  static final String sep = "-";
+    static final String sep = "-";
+    private HttpURLConnection conn = null;
   
-  private org.xmldb.api.base.Collection col = null;
-  private XPathQueryService service = null;
-  
-  private ArrayList<String> parts = new ArrayList<>();
-  private ArrayList<String> genres = new ArrayList<>();// 動作の種類 genre
-  private HashMap<String, String[]> segments = new HashMap<>();
-  private HashMap<String, String> partnames = new HashMap<>();
-  private ArrayList<String> partstrs = new ArrayList<>();
-  private HashMap<String, String> titlename2code = null;
-  private HashMap<String, String> titlecode2name = null;
-  private HashMap<String, String> genrecode2name = null;
-  private HashMap<String, String> genrename2code = null;
-  private ArrayList<Node> selectedTitle = null;
-  private String uri = null;
+    private ArrayList<String> parts = new ArrayList<>();
+    private ArrayList<String> genres = new ArrayList<>();// 動作の種類 genre
+    private HashMap<String, String[]> segments = new HashMap<>();
+    private HashMap<String, String> partnames = new HashMap<>();
+    private ArrayList<String> partstrs = new ArrayList<>();
+    private HashMap<String, String> titlename2code = null;
+    private HashMap<String, String> titlecode2name = null;
+    private HashMap<String, String> genrecode2name = null;
+    private HashMap<String, String> genrename2code = null;
+//    private ArrayList<String> selectedTitle = null;
+    private URL url = null;
 
   public MPEG7Manager() {
-
-    String driver = "org.apache.xindice.client.xmldb.DatabaseImpl";
-    String uris = MotionCompApp.getResourceString("XMLDBUri"); // "uri1,uri2,...";
-
-    Class c = null;
-    try {
-      c = Class.forName(driver);
-    } catch (ClassNotFoundException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    Database database = null;
-    try {
-      database = (Database) c.newInstance();
-    } catch (InstantiationException | IllegalAccessException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    String dburi[] = uris.split(",");
-    for (int i = 0; i < dburi.length && col == null; i++) {
-      try {
-        DatabaseManager.registerDatabase(database);
-        col = DatabaseManager.getCollection(dburi[i]);
-        service = (XPathQueryService) col.getService("XPathQueryService", "1.0");
-        uri = dburi[i];
-      } catch (XMLDBException ex) {
-//      Logger.getLogger(Mcml.class.getName()).log(Level.SEVERE, null, ex);
-      }
-    }
-    // setup parts, partnames, segments
-    String xpath = "/Mpeg7/Description/MultimediaContent/Video/CreationInformation/Header/Comment/FreeTextAnnotation";
-    ResourceSet resultSet;
-    ResourceIterator results;
-    try {
-      resultSet = service.query(xpath);
-      results = resultSet.getIterator();
-      aaa:
-      while (results.hasMoreResources()) {
-        Resource res = results.nextResource();
-        if (res.getResourceType().equals("XMLResource")) {
-          Node node = ((XMLResource) res).getContentAsDOM();
-          String[] st = node.getFirstChild().getTextContent().split(":");
-          String pcode = st[0]; // part code
-          for (String ss : parts) {
-            if (ss.equals(pcode)) {
-              break aaa;
-            }
-          }
-          parts.add(pcode);
-          partnames.put(pcode, st[1]);    // part name
-          partstrs.add(st[1]);
-          String psegs = st[2];           // segments
-          String[] st2 = psegs.split(",");
-          segments.put(pcode, st2);
+    String basex_user = MotionCompApp.getResourceString("BaseXUsername");
+    String basex_passwd = MotionCompApp.getResourceString("BaseXPassword");
+     
+    Authenticator.setDefault(new Authenticator() {
+        @Override
+        protected PasswordAuthentication getPasswordAuthentication() {
+            return new PasswordAuthentication(basex_user, basex_passwd.toCharArray());
         }
-      }
-    } catch (XMLDBException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
-    }
+    });
+    
+    try {
+        url = new URL(MotionCompApp.getResourceString("BaseXURL"));
+    } catch (MalformedURLException ex) {
+        Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+    } 
+    
+    try {
+        conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setInstanceFollowRedirects(false);
+        conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+    } catch (IOException ex) {
+        Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+    }  
 
+    // setup parts, partnames, segments
+    String query = "<query xmlns='http://basex.org/rest'><text>//Mpeg7/Description/MultimediaContent/Video/CreationInformation/Header/Comment/FreeTextAnnotation/text()</text></query>";
+       
+    try {    
+        try (OutputStream out = conn.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+            writer.write(query);
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            String line = null;
+    aaa:
+            while ((line = reader.readLine()) != null) {
+                String[] st = line.split(":");
+                String pcode = st[0]; // part code
+                for (String ss : parts) {
+                    if (ss.equals(pcode)) {
+                        break aaa;
+                    }
+                }
+                parts.add(pcode);
+                partnames.put(pcode, st[1]);    // part name
+                partstrs.add(st[1]);
+                String psegs = st[2];           // segments
+                String[] st2 = psegs.split(",");
+                segments.put(pcode, st2);
+            }
+        }
+    } catch (IOException e) {
+        Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, e);
+    } finally {
+        if (conn != null) {
+            conn.disconnect();
+        }
+    }
+    
     genrecode2name = new HashMap<>();
     genrename2code = new HashMap<>();
     // setup classes
-    xpath = "/Mpeg7/Description/CreationInformation/Classification/Genre/Name/text()";
     try {
-      resultSet = service.query(xpath);
-      results = resultSet.getIterator();
-      l1:
-      while (results.hasMoreResources()) {
-        Resource res = results.nextResource();
-        if (res.getResourceType().equals("XMLResource")) {
-          XMLResource xmlres = (XMLResource) res;
-          Node node = xmlres.getContentAsDOM();
-          String genrename = (String) node.getFirstChild().getTextContent();
-          for (String ss : genres) {
-            if (ss.equals(genrename)) {
-              continue l1;
-            }
-          }
-          genres.add(genrename);
-        }
-        genrename2code.put("Dance sport", "1.6.24");
-        genrename2code.put("Karate Kata", "1.6.40");
-        genrecode2name.put("1.6.24", "Dance sport");
-        genrecode2name.put("1.6.40", "Karate Kata");
-      } // while
-    } catch (XMLDBException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setInstanceFollowRedirects(false);
+        conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+    } catch (IOException ex) {
+        Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
     }
-    changeGenre(0);
+    try {    
+        query = "<query xmlns='http://basex.org/rest'><text>//Mpeg7/Description/CreationInformation/Classification/Genre/Name/text()</text></query>";//POSTするデータ
+        try (OutputStream out = conn.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+            writer.write(query);
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            String line = null;
+l1:
+            while ((line = reader.readLine()) != null) {
+                for (String ss : genres) {
+                    if (ss.equals(line)) {
+                        continue l1;
+                    }
+                }
+                genres.add(line);
+                genrename2code.put("Dance sport", "1.6.24");
+                genrename2code.put("Karate Kata", "1.6.40");
+                genrecode2name.put("1.6.24", "Dance sport");
+                genrecode2name.put("1.6.40", "Karate Kata");   
+            }
+        }
+    } catch (IOException ex) {
+        Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+    } finally {
+        if (conn != null) {
+            conn.disconnect();
+        }
+    }    
+//    changeGenre(0);  // 必要かどうか分からない???
   } // MPEG7Manager
 
-  public final String getUri() {
-    return uri;
-  }
-
-  public final int getStartFrame(Node segment) {
-    String str[] = null;
-    try {
-      Node node = XPathAPI.selectSingleNode(segment, "MediaTime/MediaTimePoint");
-      str = node.getFirstChild().getNodeValue().split("F");
-    } catch (javax.xml.transform.TransformerException e) {}
-    return Integer.parseInt(str[0]); //Integer.parseInt(beg);
-  }
-
-  public final int getDuration(Node segment) {
-    String str[] = null;
-    try {
-      Node node = XPathAPI.selectSingleNode(segment, "MediaTime/MediaDuration");
-      str = node.getFirstChild().getNodeValue().split("[TN]");
-    } catch (javax.xml.transform.TransformerException e) {
+    private String xQuery(String xpath) {
+        try {
+            conn = (HttpURLConnection)url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        String query = "<query xmlns='http://basex.org/rest'><text>"+xpath+"</text></query>";
+        try {
+            try (OutputStream out = conn.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(
+            new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+                writer.write(query);
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                return reader.readLine();
+            }    
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return null;
     }
-    return Integer.parseInt(str[1]); //Integer.parseInt(beg);
-}
-
-  public final float getTime(Node segment) {
-    float rate = 0.0f;
-    String str[] = null;
-    try {
-      Node node = XPathAPI.selectSingleNode(segment, "MediaTime/MediaTimePoint");
-      str = node.getFirstChild().getNodeValue().split("F");
-      rate = Float.parseFloat(str[1]);
-      node = XPathAPI.selectSingleNode(segment, "MediaTime/MediaDuration");
-      str = node.getFirstChild().getNodeValue().split("[TN]");
-    } catch (javax.xml.transform.TransformerException e) {}
-    return Float.parseFloat(str[1]) / rate;
-  }
-
-  public final String getDesc(Node segment) {
-    Node desc = null;
-    try {
-      desc = XPathAPI.selectSingleNode(segment, "CreationInformation/Creation/Abstract/FreeTextAnnotation");
-    } catch (javax.xml.transform.TransformerException te) {}
-    return desc.getFirstChild().toString();
-  }
-
-  public final String getDescription(Node segment) {
-    String description = null;
-    try {
-      description = XPathAPI.selectSingleNode(segment, "CreationInformation/Creation/Abstract/FreeTextAnnotation").getTextContent();
-    } catch (TransformerException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+  
+    public final String getUri() {
+        return "getUri() has not been implemented. "+MPEG7Manager.class.getName();    // uri;
     }
-    return description;
-  }
 
-  public final int getPartSize() {
-    return parts.size();
-  }
+    public final int getStartFrame(String motioncode) {
+//    String motioncode = "1.6.24-1159248584-0900126000-0247825860-1187363539-0001";
+        String xpath = "//VideoSegment[@id='"+motioncode+"']/MediaTime/MediaTimePoint/text()";
+        String mtp = xQuery(xpath);
+        return Integer.parseInt(mtp.substring(0,mtp.indexOf("F")));
+    }
+  
+    public final float getTime(String motioncode) {
+        String duration = getSegmentDuration(motioncode);
+        String cols[] = duration.split("[TNF]");
+        return Float.parseFloat(cols[1]) / Float.parseFloat(cols[2]);
+    }
 
-  public final String getPartName(int index) {
-    return partnames.get(parts.get(index));
-  }
+    public final String getDescription(String motioncode) //1.6.24-011568-0705896909-0686741873-0001
+    {
+//    String motioncode = "1.6.24-1159248584-0900126000-0247825860-1187363539-0001";
+        String xpath = "//VideoSegment[@id='"+motioncode+"']/CreationInformation/Creation/Abstract/FreeTextAnnotation/text()";
+        return xQuery(xpath);
+    }
+  
+    public final int getPartSize() {
+        return parts.size();
+    }
 
-  public final String[] getPartNames() {
-    return (String[])(partstrs.toArray(new String[0]));
-  }
+    public final String getPartName(int index) {
+        return partnames.get(parts.get(index));
+    }
 
-  public String getPartCode(int index) {
-    return parts.get(index);
-  }
+    public final String[] getPartNames() {
+        return (String[])(partstrs.toArray(new String[0]));
+    }
 
-  public final String[] getPartSegments(int index) { // 部位に含まれるセグメントのベクタを作成する
-    try {
-      ResourceSet resultSet = service.query("/Mpeg7/Description/MultimediaContent/Video/CreationInformation/Header/Comment/FreeTextAnnotation");
-      Resource res = resultSet.getResource(index);
-      if (res.getResourceType().equals("XMLResource")) {
-        Node node = ((XMLResource) res).getContentAsDOM();
-        String st[] = node.getFirstChild().getTextContent().split(":");
-        String[] result = st[2].split(",");
+    public String getPartCode(int index) {
+        return parts.get(index);
+    }
+
+    public final String[] getPartSegments(int index) { // 部位に含まれるセグメントのベクタを作成する
         HashMap<String, String> segname = new HashMap<>();
         segname.put("sacrum", "Hip");
         segname.put("l5", "Body");
@@ -235,59 +254,90 @@ public class MPEG7Manager {
         segname.put("l_thigh", "L-Thigh");
         segname.put("l_calf", "L-Shin");
         segname.put("l_hindfoot", "L-Foot");
-      
+
+        String xpath = "//Mpeg7/Description[@xsi:type='ContentEntityType'][1]/MultimediaContent/Video/CreationInformation/Header/Comment/FreeTextAnnotation["+(index+1)+"]/text()";
+        String line = xQuery(xpath);
+        String st[] = line.split(":");
+        String[] result = st[2].split(",");
         for (int i=0; i<result.length; i++) {
-          if (segname.get(result[i]) != null) {
-              result[i] = segname.get(result[i]);
-          }
+            if (segname.get(result[i]) != null) {
+                result[i] = segname.get(result[i]);
+            }
         }
         return result;
-      }
-    } catch (XMLDBException e) {}
-    return null;
-  }
+    }
 
 // i番目のクラス（ジャンル）に属する演目名のベクタを返す
-  public final ArrayList<String> getShowNames(int cindex) {
-    titlename2code = new HashMap<>();
-    titlecode2name = new HashMap<>();    
-    ArrayList<String> sv = new ArrayList<>();
-    String genre = genres.get(cindex); // genre name
-    String xpath = "/Mpeg7/Description/CreationInformation/Classification/Genre/Name[text()='" + genre + "']/../../../Creation";
-    try {
-      ResourceSet resultSet = service.query(xpath);
-      ResourceIterator results = resultSet.getIterator();
-      while (results.hasMoreResources()) {
-        Resource res = results.nextResource();
-        if (res.getResourceType().equals("XMLResource")) {
-          XMLResource xmlres = (XMLResource) res;
-          Node node = xmlres.getContentAsDOM();
-          String id = ((Element) node.getFirstChild()).getAttribute("id");
-          NodeList nl = ((Element) node.getFirstChild()).getElementsByTagName("Title");
-          if (nl.getLength() == 1) {
-            sv.add(nl.item(0).getTextContent());
-            titlename2code.put(nl.item(0).getTextContent(), id);
-            titlecode2name.put(id, nl.item(0).getTextContent());
-          } else if (nl.getLength() == 2) {
-            String nm = nl.item(0).getTextContent() + " " + nl.item(1).getTextContent();
-            sv.add(nm);
-            titlename2code.put(nm, id);
-            titlecode2name.put(id, nm);
-          } else {
-//
-          }
+    public final ArrayList<String> getShowNames(int cindex) {
+        titlename2code = new HashMap<>();
+        titlecode2name = new HashMap<>();    
+        ArrayList<String> sv = new ArrayList<>();
+        String genre = genres.get(cindex); // genre name
+        String xpath = "//Mpeg7/Description/CreationInformation[Classification/Genre/Name='"+genre+"']/Creation/[@id,Title/text()]";
+        String query = "<query xmlns='http://basex.org/rest'><text>"+xpath+"</text></query>";
+        try {
+            conn = (HttpURLConnection)url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
         }
-      }
-    } catch (XMLDBException e) {
+        try {
+            try (OutputStream out = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+                writer.write(query);
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+                    String[] result = line.substring(5, line.length()-1).split("\", ");
+                    if (result[1].startsWith("(")) {
+                        String[] result2 = result[1].substring(1,result[1].length()-1).split(", ");
+                        result[1] = result2[0]+"."+result2[1];
+                    }
+                    sv.add(result[1]);  //name
+                    titlename2code.put(result[1], result[0]);
+                    titlecode2name.put(result[0], result[1]);
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }    
+        return sv;
     }
-    return sv;
-  }
 
- // i番目のクラス（ジャンル）に属する演目のnodeのベクタを返す
+    // i番目のクラス（ジャンル）に属する演目のnodeのベクタを返す
+/*
   public final ArrayList<Node> changeGenre(int cindex) {
-    selectedTitle = new ArrayList<Node>();
-    String genre = genrecode2name.get(genres.get(cindex)); // genre name
-    String xpath = "/Mpeg7/Description/CreationInformation/Classification/Genre/Name[text()='"+genre+"']/../../../../following-sibling::*";
+        selectedTitle = new ArrayList<String>();
+        String genre = genrecode2name.get(genres.get(cindex)); // genre name
+        String xpath = "/Mpeg7/Description/CreationInformation/Classification/Genre/Name[text()='"+genre+"']/../../../../following-sibling::*";
+        String query = "<query xmlns='http://basex.org/rest'><text>"+xpath+"</text></query>";
+        try {
+            try (OutputStream out = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+                writer.write(query);
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+             
+      
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        }    
+
+
     try {
       ResourceSet resultSet = service.query(xpath);
       ResourceIterator results = resultSet.getIterator();
@@ -302,76 +352,84 @@ public class MPEG7Manager {
     } catch (XMLDBException e) {}
       return selectedTitle;
   }
+*/
 
-  // cindex : ジャンルのインデクス
-  // sindex : 演目のインデクス
-  // pindex : 部位のインデクス
-// cindex番目のジャンルのsindex番目の演目で、pindex用に定義されている舞踊符のベクタ
+// gindex : ジャンルのインデクス
+// sindex : 演目のインデクス
+// pindex : 部位のインデクス
+// gindex番目のジャンルのsindex番目の演目で、pindex用に定義されている舞踊符のベクタ
 // を作成する
-  public final ArrayList<Node> getSegments(int gindex, int tindex, int pindex) {
+    public final ArrayList<String> getSegments(int gindex, int tindex, int pindex) {
 //    System.out.printf("getSegments(%d,%d,%d)\n", gindex, tindex, pindex);
-    ArrayList<Node> nv = new ArrayList<>();
-    ArrayList<Node> shows = changeGenre(gindex);
-    boolean b = false;
-    String genreName = genres.get(gindex);
+        ArrayList<String> ids = new ArrayList<>();
+    //ArrayList<Node> shows = changeGenre(gindex);
+    //boolean b = false;
+        String genreName = genres.get(gindex);
 //    System.out.printf("getGenre(%d)=%s\n", gindex, genreName);
-    ArrayList<String> shownames = getShowNames(gindex);
-    String tname = shownames.get(tindex); // title
-    String tcode = titlename2code.get(tname);
-    String[] tt = tcode.split(sep);
-    String partCode = getPartCode(pindex);
-    try {
-      String xpath = "/Mpeg7/Description/CreationInformation[@id='"+tt[2]+"']/Classification/Genre/Name[text()='" + genreName + "']/../../../../../Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment[contains(@id,'" + partCode + "')]/TemporalDecomposition/VideoSegment";
-//      System.out.println("getSegments: xpath = [" + xpath + "]");
-      ResourceSet resultSet = service.query(xpath);
-      ResourceIterator results = resultSet.getIterator();
-      while (results.hasMoreResources()) {
-        Resource res = results.nextResource();
-        if (res.getResourceType().equals("XMLResource")) {
-          XMLResource xmlres = (XMLResource) res;
-          Node node = xmlres.getContentAsDOM();
-          nv.add(node.getFirstChild());
+        ArrayList<String> shownames = getShowNames(gindex);
+        String tname = shownames.get(tindex); // title
+        String tcode = titlename2code.get(tname);
+        String[] tt = tcode.split(sep);
+        String partCode = getPartCode(pindex);
+        String xpath = "//Mpeg7/Description/CreationInformation[@id='"+tt[2]+"']/Classification/Genre/Name[text()='" + genreName + "']/../../../../../Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment[contains(@id,'" + partCode + "')]/TemporalDecomposition/VideoSegment/@id";
+        String query = "<query xmlns='http://basex.org/rest'><text>"+xpath+"</text></query>";
+        try {
+            conn = (HttpURLConnection)url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
         }
-      }
-    } catch (XMLDBException e) {}
-    return nv;
-  }
-
+        try {
+            try (OutputStream out = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+                    writer.write(query);
+            }
+            try (
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+                    ids.add(line.substring(4,line.length()-1));
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return ids;
+    }
+      
   // 基本動作を得る
-  public final Node getSegment(int gindex, int tindex, int sindex, int pindex) {
+    public final String getSegment(int gindex, int tindex, int sindex, int pindex) {
 //    System.out.printf("getSegment(%d,%d,%d,%d)\n", gindex, tindex, sindex, pindex);
-    ArrayList<Node> nv = getSegments(gindex, tindex, pindex);
-    Node segment = nv.get(sindex);
-    return segment;
-  }
+        ArrayList<String> nv = getSegments(gindex, tindex, pindex);
+        return nv.get(sindex);
+    }
 
-  public final ArrayList<String> getGenres() {
-    return genres;
-  }
+  
+    public final ArrayList<String> getGenres() {
+        return genres;
+    }
 
-  public final String getMediaLocator(String motioncode, String format) {
+    public final String getMediaLocator(String motioncode, String format) {
 //    String format = "BVH";
 //    System.out.println("getMediaLocator("+motioncode+")");
-    String xpath = "/Mpeg7/Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment/TemporalDecomposition/VideoSegment[@id='" + motioncode + "']/../../../../../../../Description/MediaInformation/MediaProfile/MediaFormat/FileFormat/Name[text()='" + format + "']/../../../MediaInstance/MediaLocator/MediaUri/text()";
-    try {
-      ResourceSet resultSet = service.query(xpath);
-      Resource res = resultSet.getResource(0);
-      if (res.getResourceType().equals("XMLResource")) {
-        XMLResource xmlres = (XMLResource) res;
-        Node mediaUri = xmlres.getContentAsDOM().getFirstChild();
-//        System.out.println("uri= " + mediaUri.getTextContent());
-        return mediaUri.getTextContent();
-      }
-    } catch (XMLDBException e) {
+        String xpath = "//Mpeg7[Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment/TemporalDecomposition/VideoSegment/@id='" + motioncode + "']/Description/MediaInformation/MediaProfile[MediaFormat/FileFormat/Name='" + format + "']/MediaInstance/MediaLocator/MediaUri/text()";
+        return xQuery(xpath);
     }
-    return null;
-  }
-  
+
+  /*
   public final Node getSegment(String gcode, String tcode, String scode, String pcode) {
 //    System.out.printf("getSegment(%s,%s,%s,%s)\n", gcode, tcode, scode, pcode);
     String gname = genrecode2name.get(gcode);
 //    System.out.println("scode="+scode);
-    String xpath = "/Mpeg7/Description/CreationInformation[@id='"+tcode+"']/Classification/Genre/Name[text()='" + gname + "']/../../../../../Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment[contains(@id,'" + pcode + "')]/TemporalDecomposition/VideoSegment[@id='"+scode+"']";
+    String xpath = "//Mpeg7/Description/CreationInformation[@id='"+tcode+"']/Classification/Genre/Name[text()='" + gname + "']/../../../../../Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment[contains(@id,'" + pcode + "')]/TemporalDecomposition/VideoSegment[@id='"+scode+"']";
 //    System.out.println("getSegment: xpath = ["+xpath+"]");
     try {
       ResourceSet resultSet = service.query(xpath);
@@ -385,7 +443,9 @@ public class MPEG7Manager {
     }
     return null;
   }
-
+*/
+  
+  /*
     public final Node getSegment(String segcode) {
 //      System.out.printf("getSegment(\"%s\")\n", segcode);
       String xpath = "/Mpeg7/Description/MultimediaContent/Video/TemporalDecomposition/VideoSegment/TemporalDecomposition/VideoSegment[@id='" + segcode + "']";
@@ -402,17 +462,36 @@ public class MPEG7Manager {
       }
       return null;
   }
-
-  public final String getSegmentDuration(Node segment) {
-    String duration = null;
+  */
+  /*
+  public final int getDuration(Node segment) {
+    String str[] = null;
     try {
-      duration = XPathAPI.selectSingleNode(segment, "MediaTime/MediaDuration").getFirstChild().getNodeValue();
-    } catch (TransformerException ex) {
-      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+      Node node = XPathAPI.selectSingleNode(segment, "MediaTime/MediaDuration");
+      str = node.getFirstChild().getNodeValue().split("[TN]");
+    } catch (javax.xml.transform.TransformerException e) {
     }
-    return duration;
-  }
+    return Integer.parseInt(str[1]); //Integer.parseInt(beg);
+}*/
+  
+//  public final String getSegmentDuration(Node segment) {
+//    String duration = null;
+//    try {
+//      duration = XPathAPI.selectSingleNode(segment, "MediaTime/MediaDuration").getFirstChild().getNodeValue();
+//    } catch (TransformerException ex) {
+//      Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+//    }
+//    return duration;
+//  }
 
+    public final String getSegmentDuration(String motioncode) {
+//    String motioncode = "1.6.24-1159248584-0900126000-0247825860-1187363539-0001";
+        String xpath = "//VideoSegment[@id='"+motioncode+"']/MediaTime/MediaDuration/text()";
+        return xQuery(xpath);
+    }
+
+  
+ /*
   public final String getSegmentTitle(Node segment) {
     String segtitle = null;
     try {
@@ -422,8 +501,16 @@ public class MPEG7Manager {
     }
     return segtitle;
   }
+  */
+  
+    public final String getSegmentTitle(String motioncode) {//1.6.24-011568-0705896909-0686741873-0001
+//    String motioncode = "1.6.24-1159248584-0900126000-0247825860-1187363539-0001";
+        String xpath = "//VideoSegment[@id='"+motioncode+"']/CreationInformation/Creation/Title/text()";
+        return xQuery(xpath);
+    }
 
-  public final Node getCreation(String creationid) {
+/*
+    public final Node getCreation(String creationid) {
 //    System.out.printf("getCreation(\"%s\")\n", creationid);
     String xpath = "/Mpeg7/Description/CreationInformation/Creation[@id='"+creationid+"']";
 //    System.out.println("getCreation: xpath = ["+xpath+"]");
@@ -439,8 +526,9 @@ public class MPEG7Manager {
     } catch (XMLDBException e) {}
     return null;
   }
-
-public final String getTitle(Node creation) {
+*/
+/*
+    public final String getTitle(Node creation) {
   String title = null;
   try {
     title = XPathAPI.selectSingleNode(creation, "Title").getTextContent();
@@ -449,7 +537,50 @@ public final String getTitle(Node creation) {
   }
   return title;
 }
+*/
+    
+    public final String getTitle(String creationid)
+    {
+        String xpath = "//Mpeg7/Description/CreationInformation/Creation[@id='"+creationid+"']/[Title/text()]";
+        String query = "<query xmlns='http://basex.org/rest'><text>"+xpath+"</text></query>";
+        try {
+            conn = (HttpURLConnection)url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("Content-Type", "application/xml;charset=UTF-8");         
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try {
+            try (OutputStream out = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+                writer.write(query);
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+                    line = line.substring(1,line.length()-1);
+                    if (line.startsWith("(")) {
+                        String str[] = line.substring(1,line.length()-1).split(", ");
+                        line = str[0]+"."+str[1];
+                    }
+                    return line;
+                }
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(MPEG7Manager.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return null;    
+    }
 
+
+/*
 public final String getGivenName(Node creation) {
   String gname = null;
   try {
@@ -459,7 +590,16 @@ public final String getGivenName(Node creation) {
   }
   return gname;
 }
+*/
 
+
+    public final String getGivenName(String creationid)
+    {
+        String xpath = "//Mpeg7/Description/CreationInformation/Creation[@id='"+creationid+"']//GivenName[@xml:lang='ja']/text()";
+        return xQuery(xpath);    
+    }
+
+/*
 public final String getFamilyName(Node creation) {
   String fname = null;
   try {
@@ -469,35 +609,41 @@ public final String getFamilyName(Node creation) {
   }
   return fname;
 }
+*/
 
-
-  public void partTest() {
-    for (int i=0; i < getPartSize(); i++) {
-      System.out.print(getPartName(i) + ":" + getPartCode(i) + ":");
-      String[] sl = getPartSegments(i);
-        for (String sl1 : sl) {
-            System.out.print(sl1 + " ");
-        }
-      System.out.print("\n");
+    public final String getFamilyName(String creationid)
+    {
+        String xpath = "//Mpeg7/Description/CreationInformation/Creation[@id='"+creationid+"']//FamilyName[@xml:lang='ja']/text()";
+        return xQuery(xpath);   
     }
-  }
 
-  public void classTest() {
-    System.out.println("classTest()");
+    public void partTest() {
+        for (int i=0; i < getPartSize(); i++) {
+        System.out.print(getPartName(i) + ":" + getPartCode(i) + ":");
+        String[] sl = getPartSegments(i);
+            for (String sl1 : sl) {
+                System.out.print(sl1 + " ");
+            }
+        System.out.print("\n");
+        }
+    }
 
+    public void classTest() {
+        System.out.println("classTest()");
+/*
     Node seg1 = getSegment(0, 0, 0, 0);
     System.out.println("seg1=");
     System.out.println(seg1.toString());
     Node seg2 = getSegment(1, 0, 0, 0);
     System.out.println("seg2=");
     System.out.println(seg2.toString());
-  }
+        */
+    }
  
-  public static void main(String argv []) {
-    MPEG7Manager mgr = new MPEG7Manager();
-    mgr.classTest();
+    public static void main(String argv []) {
+        MPEG7Manager mgr = new MPEG7Manager();
+        mgr.classTest();
 //  mgr.partTest();
 //  mgr.test();
-  }
+    }
 }
-

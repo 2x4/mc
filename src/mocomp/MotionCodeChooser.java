@@ -11,8 +11,8 @@ import static mocomp.MotionCompApp.getResourceString;
 
 import java.util.ArrayList;
 import javax.swing.DefaultListModel;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
+//import org.w3c.dom.Element;
+//import org.w3c.dom.Node;
 
 /**
  *
@@ -23,9 +23,9 @@ public class MotionCodeChooser extends javax.swing.JDialog {
   private int partIndex = 0; // どの部位の舞踊符を表示するのか
 
 //  private String selectedShow;              // 選択中の一連の動作（芸能、形）
-  private Node selectedMotion = null;       // 選択中の振り
+  private String selectedMotion = null;       // 選択中の振り
 //  private ArrayList<String> currentTitles = null; // 表示中のタイトル(動作名)の一覧
-  private ArrayList<Node> currentSegments = null;
+  private ArrayList<String> currentSegments = null;
 
     /** Creates new form MotionCodeChooser */
      @SuppressWarnings("unchecked")
@@ -285,7 +285,7 @@ public class MotionCodeChooser extends javax.swing.JDialog {
         selectedMotion = currentSegments.get(motionList.getSelectedIndex());
         motionTime.setText(String.format("%1.1f", mp7mgr.getTime(selectedMotion)) +
                 getResourceString("durationUnitLabel") +
-                " (" + mp7mgr.getDuration(selectedMotion) +
+                " (" + mp7mgr.getSegmentDuration(selectedMotion) +
                 getResourceString("framelengthLabel") + ")");
         motionDesc.setText(mp7mgr.getDescription(selectedMotion));
       }
@@ -321,7 +321,7 @@ public class MotionCodeChooser extends javax.swing.JDialog {
     if (selectedMotion == null) {
       selectedMotion = mp7mgr.getSegment(0, 0, 0, 0);
     }
-    return ((Element) selectedMotion).getAttribute("id");
+    return selectedMotion;//.getAttribute("id");
   }
 
   // このダイアログがどの部位を表示するためのものか設定する

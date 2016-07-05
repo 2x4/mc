@@ -150,7 +150,6 @@ public class MotionCodePanel extends JPanel implements Comparable<MotionCodePane
    * @see ScorePanel
    */
   public MotionCodePanel(final ScorePanel scorepanel) {
-//    this.scorepanel = scorepanel;
     scorePanelBorderInsets = scorepanel.getBorder().getBorderInsets(null);
     HEIGHT = scorepanel.getHeight() - (scorePanelBorderInsets.top + scorePanelBorderInsets.bottom);
     try {

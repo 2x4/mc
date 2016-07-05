@@ -102,9 +102,11 @@ public class ExportTask extends javax.swing.SwingWorker<Void, Void> {
           } catch (MalformedURLException ex) {
             Logger.getLogger(ExportTask.class.getName()).log(Level.SEVERE, null, ex);
           }
-          Node motion = mp7mgr.getSegment(motioncode);
-          int startframe = mp7mgr.getStartFrame(motion);
-          bvh.readData(framedata, url, startframe, startframe + mp7mgr.getDuration(motion) - 1, mcp.getFrameIndex(), mcp.getLength(), jointnames, prevLastFrame);
+//          Node motion = mp7mgr.getSegment(motioncode);
+          int startframe = mp7mgr.getStartFrame(motioncode);
+          String durationtxt[] =mp7mgr.getSegmentDuration(motioncode).split("[TN]");
+          int duration = Integer.parseInt(durationtxt[1]);
+          bvh.readData(framedata, url, startframe, startframe + duration - 1, mcp.getFrameIndex(), mcp.getLength(), jointnames, prevLastFrame);
           prevLastFrame = mcp.getFrameIndex() + mcp.getLength() - 1;
         }
       }
@@ -118,11 +120,14 @@ public class ExportTask extends javax.swing.SwingWorker<Void, Void> {
     String[] requiments = mp7mgr.getPartSegments(sp.getPartIndex());
     for (MotionCodePanel mcp : sp.getMotionCodeList()) {// スコアパネルに並べられたモーションコードのリストを順に処理
       String motioncode = mcp.getMotionCode();
-      Node motion = mp7mgr.getSegment(motioncode);
+//      Node motion = mp7mgr.getSegment(motioncode);
       String url = mp7mgr.getMediaLocator(motioncode, "BVA");
       statMessage = url + "からデータを読み込みます．";
-      int startframe = mp7mgr.getStartFrame(motion);
-      bva.readData(url, startframe, startframe + mp7mgr.getDuration(motion) - 1, mcp.getFrameIndex(), mcp.getLength(), requiments);
+      int startframe = mp7mgr.getStartFrame(motioncode);
+      
+      String durationtxt[] =mp7mgr.getSegmentDuration(motioncode).split("[TN]");
+      int duration = Integer.parseInt(durationtxt[1]);
+      bva.readData(url, startframe, startframe + duration - 1, mcp.getFrameIndex(), mcp.getLength(), requiments);
     }
     return bva;
   }

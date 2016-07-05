@@ -34,7 +34,7 @@ import java.awt.event.*;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.border.*;
-import org.w3c.dom.*;
+//import org.w3c.dom.*;
 
 /**
  * モーションコードパネルを貼りつけるためのパネル
@@ -285,20 +285,19 @@ public class ScorePanel extends JPanel {
       MotionCodePanel mcp = new MotionCodePanel(this);
       String ss[] = motioncode.split("-"); // genre-cwho-cwhen-cwhat-cshow-times   1.6.24-0115683884-0892522800-0705896909-0686741873-0001
       String creationid = ss[1] + "-" + ss[2] + "-" + ss[3]; // who-when-what           1492319154-0892522800-0705896909
-      Node creation = mp7mgr.getCreation(creationid);
-      String title = mp7mgr.getTitle(creation);
-      String givenname = mp7mgr.getGivenName(creation);
-      String familyname = mp7mgr.getFamilyName(creation);
+//      Node creation = mp7mgr.getCreation(creationid);
+      String title = mp7mgr.getTitle(creationid);
+      String givenname = mp7mgr.getGivenName(creationid);
+      String familyname = mp7mgr.getFamilyName(creationid);
       mcp.setMotionCode(motioncode);
-      Node segment = mp7mgr.getSegment(motioncode);
-      String description = mp7mgr.getDescription(segment);
-      String segtitle = mp7mgr.getSegmentTitle(segment);
+      String description = mp7mgr.getDescription(motioncode);
+      String segtitle = mp7mgr.getSegmentTitle(motioncode);
       mcp.add("Center", new JLabel(segtitle+"@"+title, SwingConstants.CENTER));
       mcp.setToolTipText(segtitle+"("+description+"),"+title+","+givenname+ " "+familyname);
       mcp.setAbstract(description);
       mcp.setTitle(segtitle);
       if (framelength < 0) {
-        String str[] = mp7mgr.getSegmentDuration(segment).split("[TN]");
+        String str[] = mp7mgr.getSegmentDuration(motioncode).split("[TN]");
         framelength = Integer.parseInt(str[1]);
       }
       this.add(mcp);
