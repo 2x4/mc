@@ -1,5 +1,3 @@
-package mocomp;
-
 //			  ComposePanel.java
 //
 //	     Copyright (C) 1998,1999,2000,2009 Takashi Yukawa
@@ -17,6 +15,7 @@ package mocomp;
 // Jan.01 1999
 //  XYLayoutを使うのを止めて，Layout Managerを使わない(Absolute Positining)
 //  で内部のコンポーネントを配置するように変更した．
+package mocomp;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -101,42 +100,42 @@ public class ComposePanel extends JPanel {
 
   /**
    * partCodeを持つscorepanelを探して返す
-   * @param partCode 探すスコアパネルの部位コード
+   * @param partcode  探すスコアパネルの部位コード 
    * @return 部位コードがpartCodeであるスコアパネルが見つかったら，
    *         そのスコアパネル，見つからなかったらnull
    */
-  public ScorePanel getScorePanel(String partcode) {
-    ScorePanel sp;
-    int numComponent = panel.getComponentCount();
-    for (int i = 1; i < numComponent ; i++) {
-      sp = (ScorePanel)panel.getComponent(i);
-      if (partcode.equals(sp.getPartCode())) {
-        return sp;
-      }
+    public ScorePanel getScorePanel(String partcode) {
+        ScorePanel sp;
+        int numComponent = panel.getComponentCount();
+        for (int i = 1; i < numComponent ; i++) {
+            sp = (ScorePanel)panel.getComponent(i);
+            if (partcode.equals(sp.getPartCode())) {
+                return sp;
+            }
+        }
+        return null;
     }
-    return null;
-  }
 
-  public final ScorePanel getScorePanel(int index) {
-    return (ScorePanel)panel.getComponent(index+1);
-  }
-
-  public void setScorePanelColor(int partindex) {
-    ScorePanel sp;
-    int numComponent = panel.getComponentCount();
-    JPanel labelpanel = MotionCompApp.sharedInstance().getLabelPanel();
-    for (int i = 1; i < numComponent ; i++) {
-      sp = (ScorePanel)panel.getComponent(i);
-      if (i == partindex+1) {
-        Color c = new Color(135, 206, 235);
-        sp.setBackground(c);
-        labelpanel.getComponent(i-1).setBackground(c);
-      } else {
-        sp.setBackground(spbgcol);
-        labelpanel.getComponent(i-1).setBackground(spbgcol);
-      }
+    public final ScorePanel getScorePanel(int index) {
+        return (ScorePanel)panel.getComponent(index+1);
     }
-  }
+
+    public void setScorePanelColor(int partindex) {
+        ScorePanel sp;
+        int numComponent = panel.getComponentCount();
+        JPanel labelpanel = MotionCompApp.sharedInstance().getLabelPanel();
+        for (int i = 1; i < numComponent ; i++) {
+            sp = (ScorePanel)panel.getComponent(i);
+            if (i == partindex+1) {
+                Color c = new Color(135, 206, 235);
+                sp.setBackground(c);
+                labelpanel.getComponent(i-1).setBackground(c);
+            } else {
+                sp.setBackground(spbgcol);
+                labelpanel.getComponent(i-1).setBackground(spbgcol);
+            }
+        }
+    }
 
   /**
    * コンポーズパネルの上部に表示される時間の目盛り．時間の単位はフレーム．
@@ -144,18 +143,18 @@ public class ComposePanel extends JPanel {
    * @see MotionComp#FPS
    * @see MotionComp#PPS
    */
-  //  public static final int WIDTH = MotionComp.MAX_TIME * MotionComp.PPS;
-  class TimeScale extends JPanel {
-    private Font f = new Font("TimesRoman", Font.PLAIN, 9);
-    private FontMetrics fm = getFontMetrics(f);
+    //  public static final int WIDTH = MotionComp.MAX_TIME * MotionComp.PPS;
+    class TimeScale extends JPanel {
+        private Font f = new Font("TimesRoman", Font.PLAIN, 9);
+        private FontMetrics fm = getFontMetrics(f);
 
-    /**
-     * タイムスケールを構築する．
-     */
-    public TimeScale() {
-      this.setBackground(Color.white);
-      this.setSize(MotionCompApp.MAX_TIME * MotionCompApp.PPS, 15);
-    }
+        /**
+         * タイムスケールを構築する．
+         */
+        public TimeScale() {
+            this.setBackground(Color.white);
+            this.setSize(MotionCompApp.MAX_TIME * MotionCompApp.PPS, 15);
+        }
     
     /**
      * タイムスケールを描画する．

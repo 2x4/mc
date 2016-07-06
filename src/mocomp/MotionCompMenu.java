@@ -30,7 +30,7 @@ import javax.swing.event.*;
 import javax.swing.filechooser.*;
 import javax.swing.undo.*;
 import javax.xml.parsers.ParserConfigurationException;
-import org.xml.sax.SAXException;
+//import org.xml.sax.SAXException;
 
 /**
  * 舞踊コンポーザーのメニューバー．
@@ -328,7 +328,7 @@ public class MotionCompMenu extends JMenuBar {
       MPEG7Reader mp7reader = null;
       JFileChooser filechooser = new JFileChooser(workingDirectory);
       filechooser.setDialogTitle(MotionCompApp.getResourceString("fileChooserOpenTitle"));
-      FileFilterImpl filter = new FileFilterImpl("mp7", "Multimedia Content Description Interface");
+      FileFilter filter = new FileNameExtensionFilter("Multimedia Content Description Interface", "mp7");
       filechooser.addChoosableFileFilter(filter);
       filechooser.setFileFilter(filter);
 //      if (filechooser.showOpenDialog(MotionCompApp.sharedInstance().getFrame()) == JFileChooser.APPROVE_OPTION) {
@@ -336,13 +336,7 @@ public class MotionCompMenu extends JMenuBar {
         openfile = filechooser.getSelectedFile();
         if (openfile.exists()) {
           MotionCompApp.sharedInstance().removeAllCodePanel();
-          try {
-            mp7reader = new MPEG7Reader(openfile);
-          } catch (SAXException ex) {
-            Logger.getLogger(MotionCompMenu.class.getName()).log(Level.SEVERE, null, ex);
-          } catch (ParserConfigurationException ex) {
-            Logger.getLogger(MotionCompMenu.class.getName()).log(Level.SEVERE, null, ex);
-          }
+          mp7reader = new MPEG7Reader(openfile);
           MotionCompApp.sharedInstance().setTitle(openfile.getName());
           workingDirectory = filechooser.getCurrentDirectory().toString();
           MotionCompApp.isChanged = true;
@@ -393,7 +387,7 @@ public class MotionCompMenu extends JMenuBar {
     public void actionPerformed(ActionEvent e) {
       JFileChooser filechooser = new JFileChooser(workingDirectory);
       filechooser.setDialogTitle("名前を付けて保存");
-      FileFilterImpl filter = new FileFilterImpl("mp7", "Multimedia Content Description Interface");
+      FileFilter filter = new FileNameExtensionFilter("Multimedia Content Description Interface", "mp7");
       filechooser.addChoosableFileFilter(filter);
       filechooser.setFileFilter(filter);
 //      if (filechooser.showSaveDialog(MotionCompApp.sharedInstance().getFrame()) == JFileChooser.APPROVE_OPTION) {
@@ -428,10 +422,10 @@ public class MotionCompMenu extends JMenuBar {
       Frame frame = MotionCompApp.sharedInstance(); //.getFrame();
       JFileChooser filechooser = new JFileChooser(workingDirectory);
       filechooser.setDialogTitle(MotionCompApp.sharedInstance().getResourceString("fileChooserExportTitle"));
-      FileFilterImpl vpmfilter = new FileFilterImpl(new String[] {"bva", "vpm"}, "Biovision animation motion data");
+      FileFilter vpmfilter = new FileNameExtensionFilter("Biovision animation motion data", "bva", "vpm");
       filechooser.addChoosableFileFilter(vpmfilter);
-      filechooser.addChoosableFileFilter(new FileFilterImpl("bvh", "Biovision hierarchical motion data"));
-      filechooser.addChoosableFileFilter(new FileFilterImpl("wrl", "VRML file"));
+      filechooser.addChoosableFileFilter(new FileNameExtensionFilter("Biovision hierarchical motion data", "bvh"));
+      filechooser.addChoosableFileFilter(new FileNameExtensionFilter("VRML file","wrl"));
       filechooser.setFileFilter(vpmfilter);
       if (filechooser.showSaveDialog(frame)==JFileChooser.APPROVE_OPTION) {
         workingDirectory = filechooser.getCurrentDirectory().toString();

@@ -22,7 +22,6 @@
 /*
  *　スコアパネル
  *  五線譜に音符を配置するようにこのパネルの上に動作を表す「MotionCodePanel」を配置する
- *
  */
 
 package mocomp;
@@ -34,7 +33,6 @@ import java.awt.event.*;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.border.*;
-//import org.w3c.dom.*;
 
 /**
  * モーションコードパネルを貼りつけるためのパネル
@@ -46,159 +44,133 @@ import javax.swing.border.*;
  * @see MotionCodePanel
  */
 public class ScorePanel extends JPanel {
-  // どの部位に対応するパネルかを表す
-  private final int partIndex;
+    // どの部位に対応するパネルかを表す
+    private final int partIndex;
 
-  // モーションコードパネルのベクタ
-  // @see MotionCodePanel
-  private ArrayList<MotionCodePanel> mcpList;
+    // モーションコードパネルのベクタ
+    // @see MotionCodePanel
+    private final ArrayList<MotionCodePanel> mcpList;
 
-  private Point startPoint, endPoint, currentPoint;
+    private Point startPoint, endPoint, currentPoint;
 
-  // 最後にクリックした位置の座標．この位置に，編集 -> ペースト
-  // した舞踊符パネルが貼りつけられる．
-  private transient Point lastClickedPoint;
+    // 最後にクリックした位置の座標．この位置に，編集 -> ペースト
+    // した舞踊符パネルが貼りつけられる．
+    private transient Point lastClickedPoint;
 
-  // jdk1.2beta4のバグ??対策のフラグ．
-  // パネルをクリックしたときに，その下に重なっているパネルにもイベント
-  // (確かMouseClicked)が起きるバグを防ぐ．
-  private transient boolean mousereleased;
+    // jdk1.2beta4のバグ??対策のフラグ．
+    // パネルをクリックしたときに，その下に重なっているパネルにもイベント
+    // (確かMouseClicked)が起きるバグを防ぐ．
+    private transient boolean mousereleased;
 
-  private Insets borderInsets;
+    private final Insets borderInsets;
 
   // スコアパネルを構築する
-  public ScorePanel(int partindex) {
-    partIndex = partindex;
-    startPoint = endPoint = currentPoint = null;
-    mcpList = new ArrayList<>();
-    setBorder(new ThinBevelBorder(BevelBorder.RAISED));
-    borderInsets = getBorder().getBorderInsets(null);
-    setLayout(null);
-    enableEvents(AWTEvent.KEY_EVENT_MASK);
-    mousereleased = false;
-    addMouseListener(new MouseAdapter() {
-      @Override
-      public void mouseClicked(MouseEvent e) {
-        ComposePanel cp = (ComposePanel)getParent().getParent().getParent().getParent();
-        cp.setScorePanelColor(partIndex);
-
-        if (mousereleased && SwingUtilities.isLeftMouseButton(e)) {
-          Frame f = MotionCompApp.sharedInstance(); //.getFrame();
-          MotionCodeChooser mcc = MotionCompApp.getMotionCodeChooser();
-          Dimension fs = f.getSize();
-          Dimension ds = mcc.getSize();
-          if (ds.height > fs.height)
-            ds.height = fs.height;
-          if (ds.width > fs.width)
-            ds.width = fs.width;
-          Point p = f.getLocation();
-          mcc.setLocation(p.x + (fs.width - ds.width) / 2, p.y + (fs.height - ds.height) / 2);
-          mcc.setPart(partIndex);  // どの部位の舞踊符を用意するのか
-          // 舞踊符選択ダイアログを開き、舞踊符を選択できるようにする
-          mcc.setVisible(true);
-          if (mcc.isSelected()) { // OK button was pressed on MCC
-            addNewCodePanel(mcc.getSelectedMotionCode(), e.getX() /* *MotionCompApp.FPS/MotionCompApp.PPS */);
-            MotionCompApp.sharedInstance().setSaveMenuItemEnabled(true);
-            MotionCompApp.sharedInstance().setCutAndCopyEnabled(true);
-            MotionCompApp.isChanged = true;
-          }
-        }
-        lastClickedPoint = e.getPoint();
-
+    public ScorePanel(int partindex) {
+        partIndex = partindex;
+        startPoint = endPoint = currentPoint = null;
+        mcpList = new ArrayList<>();
+        setBorder(new ThinBevelBorder(BevelBorder.RAISED));
+        borderInsets = getBorder().getBorderInsets(null);
+        setLayout(null);
+        enableEvents(AWTEvent.KEY_EVENT_MASK);
         mousereleased = false;
+        addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            ComposePanel cp = (ComposePanel)getParent().getParent().getParent().getParent();
+            cp.setScorePanelColor(partIndex);
+
+            if (mousereleased && SwingUtilities.isLeftMouseButton(e)) {
+                Frame f = MotionCompApp.sharedInstance(); //.getFrame();
+                MotionCodeChooser mcc = MotionCompApp.getMotionCodeChooser();
+                Dimension fs = f.getSize();
+                Dimension ds = mcc.getSize();
+                if (ds.height > fs.height)
+                    ds.height = fs.height;
+                if (ds.width > fs.width)
+                    ds.width = fs.width;
+                Point p = f.getLocation();
+                mcc.setLocation(p.x + (fs.width - ds.width) / 2, p.y + (fs.height - ds.height) / 2);
+                mcc.setPart(partIndex);  // どの部位の舞踊符を用意するのか
+                // 舞踊符選択ダイアログを開き、舞踊符を選択できるようにする
+                mcc.setVisible(true);
+                if (mcc.isSelected()) { // OK button was pressed on MCC
+                    addNewCodePanel(mcc.getSelectedMotionCode(), e.getX() /* *MotionCompApp.FPS/MotionCompApp.PPS */);
+                    MotionCompApp.sharedInstance().setSaveMenuItemEnabled(true);
+                    MotionCompApp.sharedInstance().setCutAndCopyEnabled(true);
+                    MotionCompApp.isChanged = true;
+                }
+            }
+            lastClickedPoint = e.getPoint();
+
+            mousereleased = false;
         ////////////////////////////////////////
-        MotionCompApp.sharedInstance().setCutAndCopyEnabled(getSelectedPanelCounts() > 0);
-        MotionCompApp.sharedInstance().setSelectAllEnabled(getPanelCounts() > 0);
-      } // mouseClicked()
+            MotionCompApp.sharedInstance().setCutAndCopyEnabled(getSelectedPanelCounts() > 0);
+            MotionCompApp.sharedInstance().setSelectAllEnabled(getPanelCounts() > 0);
+        } // mouseClicked()
 
-      @Override
-      public void mousePressed(MouseEvent e) {
-        ScorePanel.this.requestFocus();
-        startPoint = e.getPoint();
-        currentPoint = startPoint;
-        if (!e.isControlDown()) {
-          selectAll(false);
+        @Override
+        public void mousePressed(MouseEvent e) {
+            ScorePanel.this.requestFocus();
+            startPoint = e.getPoint();
+            currentPoint = startPoint;
+            if (!e.isControlDown()) {
+                selectAll(false);
+            }
+            mousereleased = false;
+            repaint();
         }
-        mousereleased = false;
-        repaint();
-      }
 
-      @Override
-      public void mouseReleased(MouseEvent me) {
-        int sx, sy, ex, ey;
-        endPoint = me.getPoint();
-        if (startPoint.x < endPoint.x) {
-          sx = startPoint.x;
-          ex = endPoint.x;
-        } else {
-          sx = endPoint.x;
-          ex = startPoint.x;
+        @Override
+        public void mouseReleased(MouseEvent me) {
+            int sx, sy, ex, ey;
+            endPoint = me.getPoint();
+            if (startPoint.x < endPoint.x) {
+                sx = startPoint.x;
+                ex = endPoint.x;
+            } else {
+                sx = endPoint.x;
+                ex = startPoint.x;
+            }
+            if (startPoint.y < endPoint.y) {
+                sy = startPoint.y;
+                ey = endPoint.y;
+            } else {
+                sy = endPoint.y;
+                ey = startPoint.y;
+            }
+/*
+            if (sy < 0) {
+                sy = 0;
+            }
+            Dimension d = getSize();
+            if (ey > d.height) {
+                ey = d.height;
+            }
+*/
+            for (int i = sx; i <= ex; i++) {
+                Component c = findComponentAt(i, 2);
+                if (!(c instanceof MotionCodePanel)) {
+                    continue;
+                }
+                MotionCodePanel mcp = (MotionCodePanel) c;
+                MotionCompApp.sharedInstance().setCutAndCopyEnabled(true);
+                mcp.markSelect(true);
+            }
+            startPoint = currentPoint = null;
+            repaint();
+            MotionCompApp.sharedInstance().setSelectedScorePanel(ScorePanel.this);
+            mousereleased = true;
         }
-        if (startPoint.y < endPoint.y) {
-          sy = startPoint.y;
-          ey = endPoint.y;
-        } else {
-          sy = endPoint.y;
-          ey = startPoint.y;
-        }
-        if (sy < 0) {
-          sy = 0;
-        }
-        Dimension d = getSize();
-        if (ey > d.height) {
-          ey = d.height;
-        }
-        for (int i = sx; i <= ex; i++) {
-          Component c = findComponentAt(i, 2);
-          if (!(c instanceof MotionCodePanel)) {
-            continue;
-          }
-          MotionCodePanel mcp = (MotionCodePanel) c;
-          MotionCompApp.sharedInstance().setCutAndCopyEnabled(true);
-          mcp.markSelect(true);
-        }
-        startPoint = currentPoint = null;
-        repaint();
-        MotionCompApp.sharedInstance().setSelectedScorePanel(ScorePanel.this);
-        mousereleased = true;
-      }
     });
     this.addMouseMotionListener(new MouseMotionAdapter() {
+      @Override
       public void mouseDragged(MouseEvent e) {
         currentPoint = e.getPoint();
         repaint();
       }
     });
 
-    /*
-    switch (partIndex) {
-      case 0: // Head
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1035685150-0001", 0);
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1540638489-0001", 125);
-        break;
-      case 1:
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 0) ;
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 55);
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 110);
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 162);
-        break;
-      case 2:
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 0) ;
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 55);
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 110);
-        addNewCodePanel("1.6.24-1159248584-0900126000-0247825860-0374063173-0001", 162);
-        break;
-      case 3:
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1540638489-0001", 0) ;
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1540638489-0001", 125);
-        break;
-      case 4:
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1035685150-0001", 0) ;
-        addNewCodePanel("1.6.24-0480551330-0897706800-1419562367-1540638489-0001", 125);
-        break;
-      default:
-    }
- */
 //    MotionCompApp.sharedInstance().setSaveMenuItemEnabled(true);
   } // public ScorePanel()
 
@@ -259,7 +231,7 @@ public class ScorePanel extends JPanel {
   // 選択されているモーションコードパネルのベクタを作成して返す．
   // @return 選択されているモーションコードパネルのリスト
   public ArrayList<MotionCodePanel> getSelectedMotionCodePanel() {
-    ArrayList<MotionCodePanel> mcl = new ArrayList<MotionCodePanel>();
+    ArrayList<MotionCodePanel> mcl = new ArrayList<>();
     for (MotionCodePanel mcp : mcpList) {
       if (mcp.isSelected())
         mcl.add(mcp);
@@ -270,7 +242,7 @@ public class ScorePanel extends JPanel {
   /**
    * 新しいモーションコードパネルを貼りつける．
    * @param motioncode モーションコード (CC-SS-MM-PPの形式)
-   * @param frameIndex 新しいモーションコードの開始位置
+   * @param startindex 新しいモーションコードの開始位置
    * @see DDSReader
    */
   public final void addNewCodePanel(String motioncode, int startindex) {
@@ -410,7 +382,7 @@ public class ScorePanel extends JPanel {
   // @return このスコアパネルの文字列表現．
   @Override
   public String toString() {
-    String psegs = org.apache.commons.lang3.StringUtils.join(mp7mgr.getPartSegments(partIndex), ",");
+    String psegs = String.join(",", mp7mgr.getPartSegments(partIndex));
     return (mp7mgr.getPartCode(partIndex) + ": " + psegs);
   }
 

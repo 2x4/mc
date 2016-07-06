@@ -31,7 +31,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import vecmath.Euler;
 import vecmath.Vector3f;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * BioVisionAnimのデータを保持するためのクラス
@@ -158,7 +157,7 @@ public class BioVisionAnim extends HashMap<String, BioVisionAnim.Segment> {
         out.println("Frames: " + segm.size());
         out.println("Frame Time: " + segm.getFrameTime());
         out.println("XTRAN   YTRAN   ZTRAN   XROT    YROT    ZROT    XSCALE  YSCALE  ZSCALE");
-        out.println(StringUtils.join(segm.getParamUnits(), '\t'));
+        out.println(String.join("\t", segm.getParamUnits()));
         for (FrameData fd : segm) {   // XXX:要検証
             out.println(fd.toString());        
         }
@@ -987,7 +986,7 @@ public class BioVisionAnim extends HashMap<String, BioVisionAnim.Segment> {
 
       try {
           // モーションデータサーバではフレームを1から数える（舞踊符も）         
-        url = new URL(bvafile+"&sp="+startframe+"&ep="+endframe+"&part="+StringUtils.join(requiments,','));
+        url = new URL(bvafile + "&sp=" + startframe + "&ep=" + endframe + "&part=" + String.join(",", requiments));
         System.out.println(url.toString() + "からデータを読み込みます");
         urlconn = (HttpURLConnection) url.openConnection();
         urlconn.setRequestMethod("GET");
@@ -1024,7 +1023,7 @@ public class BioVisionAnim extends HashMap<String, BioVisionAnim.Segment> {
               }
             }
             if (i == requiments.length) {
-                System.err.println("セグメント "+StringUtils.join(requiments,',')+"が見つかりません");
+                System.err.println("セグメント " + String.join(",", requiments) + "が見つかりません");
               continue;                      // not match
             }
             segment = addNewSegment(segmentname);           

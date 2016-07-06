@@ -39,7 +39,6 @@ import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.ArrayList;
-import org.w3c.dom.Node;
 import vecmath.*;
 /**
  *

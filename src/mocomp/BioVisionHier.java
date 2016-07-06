@@ -32,150 +32,150 @@ import java.util.logging.Logger;
 import javax.vecmath.*;
 
 public class BioVisionHier {
-  static final double DEG2RAD = Math.PI/180.0;
-  static final double RAD2DEG = 180.0/Math.PI;
-  private int channellen; // joints内のジョイントに含まれるチャネル数の合計
-  private Joint root;
-  private Motion motion;
-  private ArrayList<Joint> joints;
-  private HashMap<String, Point> jntpos;
+    static final double DEG2RAD = Math.PI/180.0;
+    static final double RAD2DEG = 180.0/Math.PI;
+    private int channellen; // joints内のジョイントに含まれるチャネル数の合計
+    private Joint root;
+    private Motion motion;
+    private ArrayList<Joint> joints;
+    private HashMap<String, Point> jntpos;
   
-  public BioVisionHier() {
-    joints = new ArrayList<>();
-    motion = new Motion();
+    public BioVisionHier() {
+        joints = new ArrayList<>();
+        motion = new Motion();
 // XXX : ファイルから読み込んで設定すること
-    jntpos = new HashMap<>();
-    jntpos.put("HumanoidRoot", new Point(0, 5));
-    jntpos.put("sacroiliac", new Point(6,8));
-    jntpos.put("l_hip", new Point(9, 11));
-    jntpos.put("l_knee", new Point(12, 14));
-    jntpos.put("l_ankle", new Point(15, 17));
-    jntpos.put("r_hip", new Point(18, 20));
-    jntpos.put("r_knee", new Point(21, 23));
-    jntpos.put("r_ankle", new Point(24, 26));
-    jntpos.put("vl5", new Point(27, 29));
-    jntpos.put("l_shoulder", new Point(30, 32));
-    jntpos.put("l_elbow", new Point(33, 35));
-    jntpos.put("l_wrist", new Point(36, 38));
-    jntpos.put("r_shoulder", new Point(39, 41));
-    jntpos.put("r_elbow", new Point(42, 44));
-    jntpos.put("r_wrist", new Point(45,47));
-    jntpos.put("skullbase", new Point(48,50));
-  }
+        jntpos = new HashMap<>();
+        jntpos.put("HumanoidRoot", new Point(0, 5));
+        jntpos.put("sacroiliac", new Point(6,8));
+        jntpos.put("l_hip", new Point(9, 11));
+        jntpos.put("l_knee", new Point(12, 14));
+        jntpos.put("l_ankle", new Point(15, 17));
+        jntpos.put("r_hip", new Point(18, 20));
+        jntpos.put("r_knee", new Point(21, 23));
+        jntpos.put("r_ankle", new Point(24, 26));
+        jntpos.put("vl5", new Point(27, 29));
+        jntpos.put("l_shoulder", new Point(30, 32));
+        jntpos.put("l_elbow", new Point(33, 35));
+        jntpos.put("l_wrist", new Point(36, 38));
+        jntpos.put("r_shoulder", new Point(39, 41));
+        jntpos.put("r_elbow", new Point(42, 44));
+        jntpos.put("r_wrist", new Point(45,47));
+        jntpos.put("skullbase", new Point(48,50));
+    }
 
-  public void saveData(File savefile, double[][] motiondata) {
-    int i, j;
-    PrintWriter out = null;
-    Hierarchy h = new Hierarchy();
-    try {
-      out = new PrintWriter(new BufferedWriter(new FileWriter(savefile)));
-      out.print(h.getHier());
-      out.println("MOTION");
-      out.println("Frames: " + motiondata.length);
-      out.println("Frame Time: 0.033333");
-      for (i = 0; i < motiondata.length; i++) {
-        for (j = 0; j < motiondata[0].length - 1; j++) {
-          out.print(motiondata[i][j] + " ");
+    public void saveData(File savefile, double[][] motiondata) {
+        int i, j;
+        PrintWriter out = null;
+        Hierarchy h = new Hierarchy();
+        try {
+            out = new PrintWriter(new BufferedWriter(new FileWriter(savefile)));
+            out.print(h.getHier());
+            out.println("MOTION");
+            out.println("Frames: " + motiondata.length);
+            out.println("Frame Time: 0.033333");
+            for (i = 0; i < motiondata.length; i++) {
+                for (j = 0; j < motiondata[0].length - 1; j++) {
+                    out.print(motiondata[i][j] + " ");
+                }
+                out.println(motiondata[i][j]-1);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);
         }
-        out.println(motiondata[i][j]-1);
-      }
-    } catch (IOException ex) {
-      Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    out.close();
-  }
-
-  public final void readData(double[][] framedata, URL bvhurl, int srcbeginframe, int srcendframe, int tgtstartindex, int tgtframelength, String[] jointnames, int prevLastFrame) {
-    Reader reader = new Reader(framedata, bvhurl, srcbeginframe, srcendframe, tgtstartindex, tgtframelength, prevLastFrame);
-    reader.run(jointnames); // データを読み込むジョイント名の配列
-  }
-
-  class Reader {
-    private int sourceBeginFrame = 0; // もとのbvhファイル中の開始フレーム
-    private int sourceEndFrame = -1;  // もとのbvhファイル中の終了フレーム
-    private int startIndex = 0;       // 舞踊譜での開始フレーム
-    private int frameLength = -1;     // 舞踊符の長さ
-    private int prevLastFrame;        // 1つ前の舞踊符の終了フレーム
-    private LineNumberReader reader = null;
-    private String line = null;
-    private double[][] framedata;
-
-    public Reader(double[][] framedata, URL bvhurl, int startframe, int endframe, int startindex, int framelength, int prevLastFrame) {
-      this.sourceBeginFrame = startframe;
-      this.sourceEndFrame = endframe;
-      this.startIndex = startindex;
-      this.frameLength = framelength;
-      this.framedata = framedata;
-      this.prevLastFrame = prevLastFrame;
-
-      HttpURLConnection urlconn = null;
-      try {
-        System.out.println("url=" + bvhurl.toString());
-        urlconn = (HttpURLConnection) bvhurl.openConnection();
-        urlconn.setRequestMethod("GET");
-        urlconn.connect();
-        reader = new LineNumberReader(new BufferedReader(new InputStreamReader(urlconn.getInputStream())));
-      } catch (ProtocolException ex) {
-        Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);        
-      } catch (IOException ex) {
-        Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);
-      }
-    }
-    // 指定されたパラメータが示すフレームの範囲にしたがってURLからデータの読み込みを行う
-    public void run(String[] joints) {
-      try {
-        readHierachy();
-        readMotionHeader();
-        readMotion(joints);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+        out.close();
     }
 
-    // BioVisionHierachyのHIERACHYからMOTIONの前の行までを読み込む
-    private final void readHierachy() throws IOException {
-      Joint joint = null;
-      Joint j = null;
-      channellen = 0;
-      while ((line = reader.readLine()) != null) {
-        line = line.trim();
-        line = line.replace('\t', ' ');
-        String[] ss = line.split("\\s+");
-        if (ss[0].equals("ROOT")) {
-          root = new Joint(ss[1], null);
-          joint = root;
-          joints.add(joint);
-        } else if (ss[0].equals("JOINT")) {
-          j = new Joint(ss[1], joint);
-          joint.addChild(j);
-          joint = j;
-          joints.add(joint);
-        } else if (ss[0].equals("End")) { // end effector
-          if (ss[1].equals("Site")) {
-            j = new Joint("End Site", joint);
-            joint.addChild(j);
-            joint = j;
-          }
-        } else if (ss[0].equals("OFFSET")) {
-          double x = Double.parseDouble(ss[1]);
-          double y = Double.parseDouble(ss[2]);
-          double z = Double.parseDouble(ss[3]);
-          joint.setOffset(x, y, z);
-        } else if (ss[0].equals("CHANNELS")) {
-          int nchannels = Integer.parseInt(ss[1]);
-          channellen += nchannels;
-          String[] channelname = new String[nchannels];
-          for (int i = 0; i < nchannels; i++) {
-            channelname[i] = ss[i+2];
-          }
-          joint.setChannelName(channelname);
-        } else if (ss[0].equals("MOTION")) {
-              return;		// おしまい
-        } else if (ss[0].equals("}")) {
-          joint = joint.getParent();
+    public final void readData(double[][] framedata, URL bvhurl, int srcbeginframe, int srcendframe, int tgtstartindex, int tgtframelength, String[] jointnames, int prevLastFrame) {
+        Reader reader = new Reader(framedata, bvhurl, srcbeginframe, srcendframe, tgtstartindex, tgtframelength, prevLastFrame);
+        reader.run(jointnames); // データを読み込むジョイント名の配列
+    }
+
+    class Reader {
+        private int sourceBeginFrame = 0; // もとのbvhファイル中の開始フレーム
+        private int sourceEndFrame = -1;  // もとのbvhファイル中の終了フレーム
+        private int startIndex = 0;       // 舞踊譜での開始フレーム
+        private int frameLength = -1;     // 舞踊符の長さ
+        private int prevLastFrame;        // 1つ前の舞踊符の終了フレーム
+        private LineNumberReader reader = null;
+        private String line = null;
+        private double[][] framedata;
+
+        public Reader(double[][] framedata, URL bvhurl, int startframe, int endframe, int startindex, int framelength, int prevLastFrame) {
+            this.sourceBeginFrame = startframe;
+            this.sourceEndFrame = endframe;
+            this.startIndex = startindex;
+            this.frameLength = framelength;
+            this.framedata = framedata;
+            this.prevLastFrame = prevLastFrame;
+
+            HttpURLConnection urlconn = null;
+            try {
+                System.out.println("url=" + bvhurl.toString());
+                urlconn = (HttpURLConnection) bvhurl.openConnection();
+                urlconn.setRequestMethod("GET");
+                urlconn.connect();
+                reader = new LineNumberReader(new BufferedReader(new InputStreamReader(urlconn.getInputStream())));
+            } catch (ProtocolException ex) {
+                Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);        
+            } catch (IOException ex) {
+                Logger.getLogger(BioVisionHier.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-      } // while
-    } // readHierachy()
+        // 指定されたパラメータが示すフレームの範囲にしたがってURLからデータの読み込みを行う
+        public void run(String[] joints) {
+            try {
+                readHierachy();
+                readMotionHeader();
+                readMotion(joints);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // BioVisionHierachyのHIERACHYからMOTIONの前の行までを読み込む
+        private final void readHierachy() throws IOException {
+            Joint joint = null;
+            Joint j = null;
+            channellen = 0;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                line = line.replace('\t', ' ');
+                String[] ss = line.split("\\s+");
+                if (ss[0].equals("ROOT")) {
+                    root = new Joint(ss[1], null);
+                    joint = root;
+                    joints.add(joint);
+                } else if (ss[0].equals("JOINT")) {
+                    j = new Joint(ss[1], joint);
+                    joint.addChild(j);
+                    joint = j;
+                    joints.add(joint);
+                } else if (ss[0].equals("End")) { // end effector
+                    if (ss[1].equals("Site")) {
+                        j = new Joint("End Site", joint);
+                        joint.addChild(j);
+                        joint = j;
+                    }
+                } else if (ss[0].equals("OFFSET")) {
+                    double x = Double.parseDouble(ss[1]);
+                    double y = Double.parseDouble(ss[2]);
+                    double z = Double.parseDouble(ss[3]);
+                    joint.setOffset(x, y, z);
+                } else if (ss[0].equals("CHANNELS")) {
+                    int nchannels = Integer.parseInt(ss[1]);
+                    channellen += nchannels;
+                    String[] channelname = new String[nchannels];
+                    for (int i = 0; i < nchannels; i++) {
+                        channelname[i] = ss[i+2];
+                    }
+                    joint.setChannelName(channelname);
+                } else if (ss[0].equals("MOTION")) {
+                    return;		// おしまい
+                } else if (ss[0].equals("}")) {
+                    joint = joint.getParent();
+                }
+            } // while
+        } // readHierachy()
 
     // BioVisionHierachyのMOTIONのフレーム数とフレームタイムを読み込む
     // BioVisionHier.motionのframesとframetimeを設定する
