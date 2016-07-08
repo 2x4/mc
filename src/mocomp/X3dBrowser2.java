@@ -42,7 +42,7 @@ public class X3dBrowser2 extends javax.swing.JPanel {
     X3DComponent x3dComp = BrowserFactory.createX3DComponent(requestedParameters);
 
     // Add the component to the UI
-    JComponent x3dPanel = (JComponent) x3dComp.getImplementation();
+    JComponent x3dPanel = (JComponent) x3dComp;//   .getImplementation();
     add(x3dPanel, BorderLayout.CENTER);
 
     // Get an external browser
