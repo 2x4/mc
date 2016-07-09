@@ -98,7 +98,7 @@ public class MotionCompApp extends javax.swing.JFrame {
   public final void setScoreAuthor(String author) { infopanel.setAuthor(author);  }
   public final void clearInfoPanel() { infopanel.clear(); }
 //  private OGLBrowser browser;
-  private X3dBrowser2 browser;
+  private X3dBrowser browser;
   private MotionCompMenu menubar;
   
   public static String workingDirectory;
@@ -130,7 +130,7 @@ public class MotionCompApp extends javax.swing.JFrame {
     jPanel2.add(labelpanel, java.awt.BorderLayout.CENTER);
     jPanel2.setPreferredSize(new Dimension(getResourceValue("labelPanel.width"), jPanel2.getSize().height));
 
-    browser = new X3dBrowser2();
+    browser = new X3dBrowser();
     jPanel4.add(browser, BorderLayout.CENTER);
     jPanel4.setSize(400, 400);
     jPanel4.setVisible(false);

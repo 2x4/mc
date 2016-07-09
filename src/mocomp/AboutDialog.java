@@ -21,6 +21,7 @@ public class AboutDialog extends javax.swing.JDialog {
 
     /**
      * Creates new form AboutDialog
+     *
      * @param parent
      * @param modal
      */
