@@ -1,7 +1,9 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+// MPEG7Writer.java
+//
+// Copyright (C) 2009 Takashi Yukawa
+// This java source file confirms the MIT license
+// https://github.com/2x4/mc/blob/master/LICENSE
+
 /*
  * 以下の例外が起きるのを防ぐために、
  * Exception in thread "AWT-EventQueue-0" java.lang.AbstractMethodError: org.apache.xml.serialize.DOMSerializerImpl.getDomConfig()Lorg/w3c/dom/DOMConfiguration;

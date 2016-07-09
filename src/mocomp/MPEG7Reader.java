@@ -1,12 +1,8 @@
-//			    MP7Reader.java
+// MPEG7Reader.java
 //
-//	       Copyright (C) 2009 Takashi Yukawa
-//
-//		    This java source file conforms
-//		GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawa@fukushima-nct.ac.jp>
-// Created: May.25, 2009
+// Copyright (C) 2009 Takashi Yukawa
+// This java source file confirms the MIT license
+// https://github.com/2x4/mc/blob/master/LICENSE
 
 package mocomp;
 

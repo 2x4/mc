@@ -1,9 +1,10 @@
-/*
- * MotionCompApp.java
- *
- * Created on 2009/08/28, 8:39:18
- */
-
+//
+// MotionCompApp.java
+//
+// Copyright (C) 2009 Takashi Yukawa
+// This source is licenced under the MIT license
+// https://github.com/2x4/mc/blob/master/LICENSE
+//
 package mocomp;
 
 import java.awt.*;
@@ -25,7 +26,7 @@ import org.web3d.vrml.sav.InputSource;
  * @author Takashi Yukawa (yukawalab@gmail.com)
  */
 public class MotionCompApp extends javax.swing.JFrame {
-  public static final String VERSION = "$Id: MotionCompApp.java 44 2009-09-11 00:09:25Z yukawa $";
+  public static final String VERSION = "MotionCompApp  2016/07/09";
 
   // 舞踊譜を編集するためのおおもとになるパネル
   // @see ComposePanel

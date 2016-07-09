@@ -1,14 +1,9 @@
 //
 //			  BioVisionAnim.java
 //
-//	       Copyright (C) 1998, 1999 Takashi Yukawa
-//
-//		    This java source file conforms
-//		GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawa@fukushiuma-nct.ac.jp>
-// Created: Sep 16, 1998
-// Revised: Jan.30, 2000
+//	        Copyright (C) 1998-2015 Takashi Yukawa
+//           This java source file confirms the MIT license
+//            https://github.com/2x4/mc/blob/master/LICENSE
 //
 // Change Log
 // Sep.04, 2015

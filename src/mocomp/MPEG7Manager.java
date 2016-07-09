@@ -1,15 +1,11 @@
 //
-//			      MPEG7Manager.java
+//                        MPEG7Manager.java
 //
-//		Copyright (C) 1999-2016 Takashi Yukawa
+//             Copyright (C) 1999-2016 Takashi Yukawa
+//        This java source file confirms the MIT license
+//         https://github.com/2x4/mc/blob/master/LICENSE
 //
-//		    This java source file conforms
-//		GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawalab@gmail.com>
-// Created: May.28, 1999
-// Revised: Jul.05, 2016
-//
+// Change Log:
 // Jul.05, 2016
 // * XMLデータベースとして使っていたApache Xindiceのプロジェクトが終了したので，
 //   BaseXを利用するように修正した．

@@ -1,23 +1,10 @@
 //
-//			   ScorePanel.java
+// ScorePanel.java
 //
-//	       Copyright (C) 1998, 1999 Takashi Yukawa
+// Copyright (C) 1998, 1999 Takashi Yukawa
+// This source is licenced under the MIT license
+// https://github.com/2x4/mc/blob/master/LICENSE
 //
-//		    This java source file conforms
-//		GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawalab@gmail.com>
-// Created: Sep.16, 1998
-// Revised: Jan.02, 1999
-//
-// Change Log
-// Jan.02 1999
-// * MotionCodeをSS-MM-PPからCC-SS-MM-PPの形式に変更した．
-// Jan.01 1999
-// * MotionCodePanelをこのパネルに配置するときの位置とMotionCodePanelを
-//   移動した後の位置が2ポイントずれていたのを修正した．
-// * XYLayoutを使うのを止めて，Layout Managerを使わない(Absolute Positining)
-//   で内部のコンポーネントを配置するように変更した．
 
 /*
  *　スコアパネル

@@ -1,25 +1,10 @@
 //
-//			 MotionCodePanel.java
+// MotionCodePanel.java
 //
-//	       Copyright (C) 1998-2009 Takashi Yukawa
+// Copyright (C) 1998-2009 Takashi Yukawa
+// This java source file confirms the MIT license
+// https://github.com/2x4/mc/blob/master/LICENSE
 //
-//		    This java source file conforms
-//		GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawa@nau.ac.jp>
-// Created: Sep 16, 1998
-// Revised: Feb.07, 1999
-//
-// Change Log
-// Feb.07, 1999
-// *パネル上にマウスカーソルを位置したときとボタンを押した状態の，カーソルアイコンを
-//  変更した．
-// Jan.01 1999
-// *このパネルを伸縮できるようにした．
-// *このパネルをScorePanelに配置するときの位置と移動した後の位置が2ポイント
-//  ずれていたのを修正した．
-// *XYLayoutを使うのを止めて，Layout Managerを使わない(Absolute Positining)
-//  で内部のコンポーネントを配置するように変更した．
 
 package mocomp;
 

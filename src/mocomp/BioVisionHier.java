@@ -2,15 +2,8 @@
 //			  BioVisionHier.java
 //
 //	       Copyright (C) 1999-2009 Takashi Yukawa
-//
-//        This java source file conforms
-//     GNU GENERAL PUBLIC LICENSE Version 2.
-//
-// Author:  Takashi Yukawa <yukawa@fukushima-nct.ac.jp>
-// Created: Aug.14, 1999
-// Revised: Aug.17, 1999
-// Revised: Dec.23, 2008
-// Revised: Jan.29, 2009
+//           This java source file confirms the MIT license
+//            https://github.com/2x4/mc/blob/master/LICENSE
 //
 // Change Log:
 // Jan.29, 2009
