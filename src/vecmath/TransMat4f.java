@@ -18,16 +18,16 @@ public class TransMat4f {
     */
   }
 
-  public TransMat4f(TransMat4f t) {
-    m00 = t.m00;    m01 = t.m01;    m02 = t.m02;    m03 = t.m03;
-    m10 = t.m10;    m11 = t.m11;    m12 = t.m12;    m13 = t.m13;
-    m20 = t.m20;    m21 = t.m21;    m22 = t.m22;    m23 = t.m23;
-    m30 = t.m30;    m31 = t.m31;    m32 = t.m32;    m33 = t.m33;
-  }
+//  public TransMat4f(TransMat4f t) {
+//    m00 = t.m00;    m01 = t.m01;    m02 = t.m02;    m03 = t.m03;
+//    m10 = t.m10;    m11 = t.m11;    m12 = t.m12;    m13 = t.m13;
+//    m20 = t.m20;    m21 = t.m21;    m22 = t.m22;    m23 = t.m23;
+//    m30 = t.m30;    m31 = t.m31;    m32 = t.m32;    m33 = t.m33;
+//  }
 
-  public TransMat4f(Euler rot) {
-    this.setRotation(rot);
-  }
+//  public TransMat4f(Euler rot) {
+//    this.setRotation(rot);
+//  }
 
   /**
    * この行列とベクタvを乗算して，その結果をベクタvに保存する．
@@ -150,7 +150,7 @@ public class TransMat4f {
     e.setYawRad((float)Math.atan2(m10, m00));
     return e;
   }
-
+/*
   public static void main(String args[]) {
       float DEG2RAD = (float)(Math.PI / 180.0);
       float pitch = 30.0f;
@@ -173,7 +173,7 @@ public class TransMat4f {
       }
       System.out.println(p.toString());
   }
-
+*/
     /*
   public static void main(String args[]) {
     float pitch, roll, yaw;

@@ -9,7 +9,7 @@
 // Created: Jan.17, 1999
 package vecmath;
 
-import java.text.*;
+//import java.text.*;
 
 public class Vector3f {
   public float x;
@@ -54,7 +54,7 @@ public class Vector3f {
     this.y -= v.y;
     this.z -= v.z;
   }
-
+/*
   public final String toString() {
     NumberFormat nf = NumberFormat.getInstance();
     nf.setMaximumFractionDigits(4);
@@ -63,4 +63,5 @@ public class Vector3f {
       String.valueOf(nf.format(y)) + " " + 
       String.valueOf(nf.format(z));
   }
+*/
 }
